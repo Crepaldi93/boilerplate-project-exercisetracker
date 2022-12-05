@@ -12,14 +12,14 @@ mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopol
 const exerciseSchema = new mongoose.Schema({
   description: {
     type: String,
-    required: true,
+    required: true
   },
   duration: {
     type: Number,
     required: true
   },
   date: {
-    type: Date,
+    type: Date
   }
 });
 
