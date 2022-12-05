@@ -6,10 +6,14 @@ const mongoose = require('mongoose');
 const { response } = require('express');
 
 // Connect to mongoDB
-mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true });
+mongoose.connect("mongodb+srv://crepaldi93:senha123@exercise-tracker.tvmlgb6.mongodb.net/?retryWrites=true&w=majority", { useNewUrlParser: true, useUnifiedTopology: true });
 
 // Create exercise schema
 const exerciseSchema = new mongoose.Schema({
+  userId: {
+    type: String,
+    required: true
+  },
   description: {
     type: String,
     required: true
@@ -19,7 +23,7 @@ const exerciseSchema = new mongoose.Schema({
     required: true
   },
   date: {
-    type: Date
+    type: String
   }
 });
 
@@ -30,9 +34,9 @@ const Exercise = mongoose.model("Exercise", exerciseSchema);
 const userSchema = new mongoose.Schema({
   username: {
     type: String,
-    required: true
-  },
-  log: [exerciseSchema]
+    required: true,
+    unique: true
+  }
 });
 
 // Create user model
@@ -77,40 +81,45 @@ app.get("/api/users", (req, res) => {
 })
 
 // Post new exercise
-app.post("/api/users/:_id?/exercises", (req, res) => {
-  //Insert new exercise into the database
-  let newExercise = new Exercise({
-    description: req.body.description,
-    duration: parseInt(req.body.duration),
-    date: req.body.date
-  });
+app.post("/api/users/:_id/exercises", (req, res) => {
+  let thisId = req.params._id;
+  let thisDescription = req.body.description;
+  let thisDuration = parseInt(req.body.duration);
+  let thisDate
 
-  // Check if date is an empty string
-  if (!newExercise.date) {
-    newExercise.date = new Date().toISOString().substring(0,10);
+  if (!req.body.date) {
+    thisDate = (new Date()).toDateString();
+  } else if (new Date(req.body.date) == "Invalid Date") {
+    return res.json({error: "invalid date"})
+  } else {
+    thisDate = (new Date(req.body.date)).toDateString();
   }
 
-  console.log(req.body);
-  if (!req.body[":_id"]) {
-    res.json({error: "no id provided"})
-  }
-  // Add info to user log
-  User.findByIdAndUpdate(
-    req.body[":_id"],
-    {$push: {log: newExercise}},
-    {returnDocument: "after"},
-    (err, updatedUser) => {
-      if (err) return console.error(err)
-      let responseObject = {}
-      responseObject["_id"] = req.body[":_id"];
-      responseObject["username"] = updatedUser.username;
-      responseObject["date"] = new Date(newExercise.date).toDateString();
-      responseObject["duration"] = newExercise.duration;
-      responseObject["description"] = newExercise.description;
-      res.json(responseObject);
+  User.findById(thisId, (err, user) => {
+    if (err) return console.error(err);
+    if (user !== null) {
+      let newExercise = new Exercise({
+        userId: thisId,
+        description: thisDescription,
+        duration: thisDuration,
+        date: thisDate
+      });
+      newExercise.save( (err2, exercise) => {
+        if (err2) return console.error(err2);
+        return res.json({
+          id: user._id,
+          username: user.username,
+          date: exercise.date,
+          duration: exercise.duration,
+          description: exercise.description  
+        });
+      });
+    } else {
+      return res.json({error: "user not found"})
     }
-  );
+  });
 });
+
 
 
 // Export mongoose
