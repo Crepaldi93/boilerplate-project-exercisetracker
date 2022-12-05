@@ -3,16 +3,13 @@ const app = express();
 const cors = require('cors');
 require('dotenv').config();
 const mongoose = require('mongoose');
+const { response } = require('express');
 
 // Connect to mongoDB
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true });
 
 // Create exercise schema
 const exerciseSchema = new mongoose.Schema({
-  username: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User"
-  },
   description: {
     type: String,
     required: true,
@@ -23,10 +20,6 @@ const exerciseSchema = new mongoose.Schema({
   },
   date: {
     type: Date,
-  },
-  _id: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User"
   }
 });
 
@@ -84,11 +77,40 @@ app.get("/api/users", (req, res) => {
 })
 
 // Post new exercise
-app.post("/api/users/:_id/exercises", (req, res) => {
-  
-  
-  res.json({})
-})
+app.post("/api/users/:_id?/exercises", (req, res) => {
+  //Insert new exercise into the database
+  let newExercise = new Exercise({
+    description: req.body.description,
+    duration: parseInt(req.body.duration),
+    date: req.body.date
+  });
+
+  // Check if date is an empty string
+  if (!newExercise.date) {
+    newExercise.date = new Date().toISOString().substring(0,10);
+  }
+
+  console.log(req.body);
+  if (!req.body[":_id"]) {
+    res.json({error: "no id provided"})
+  }
+  // Add info to user log
+  User.findByIdAndUpdate(
+    req.body[":_id"],
+    {$push: {log: newExercise}},
+    {returnDocument: "after"},
+    (err, updatedUser) => {
+      if (err) return console.error(err)
+      let responseObject = {}
+      responseObject["_id"] = req.body[":_id"];
+      responseObject["username"] = updatedUser.username;
+      responseObject["date"] = new Date(newExercise.date).toDateString();
+      responseObject["duration"] = newExercise.duration;
+      responseObject["description"] = newExercise.description;
+      res.json(responseObject);
+    }
+  );
+});
 
 
 // Export mongoose
