@@ -84,14 +84,17 @@ app.post("/api/users/:_id/exercises", (req, res) => {
   let myDuration = parseInt(req.body.duration);
   let myDate = req.body.date;
 
-  if (new Date(myDate) == "Invalid Date") {
-    return res.json ({error: "Date is Invalid"});
-  } else if (myDate == "") {
-    myDate = (new Date()).toDateString();
+  if (!myDate) {
+    myDate = new Date().toDateString();
+  } else if (new Date(myDate) == 'Invalid Date') {
+    return res.json({error: 'Date is invalid'});
   } else {
-    myDate = (new Date(myDate)).toDateString();
+    myDate = myDate.replace(/-/g, '\/')
+    myDate = new Date(myDate).toDateString();
   }
   
+  console.log(myDate);
+
   if (!myId) {
     return res.json({error: "No id provided"});
   }
