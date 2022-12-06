@@ -10,10 +10,6 @@ mongoose.connect("mongodb+srv://crepaldi93:senha123@exercise-tracker.tvmlgb6.mon
 
 // Create exercise schema
 const exerciseSchema = new mongoose.Schema({
-  userId: {
-    type: String,
-    required: true
-  },
   description: {
     type: String,
     required: true
@@ -36,7 +32,8 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true
-  }
+  },
+  log: [exerciseSchema]
 });
 
 // Create user model
@@ -82,42 +79,52 @@ app.get("/api/users", (req, res) => {
 
 // Post new exercise
 app.post("/api/users/:_id/exercises", (req, res) => {
-  let thisId = req.params._id;
-  let thisDescription = req.body.description;
-  let thisDuration = parseInt(req.body.duration);
-  let thisDate
+  let myId = req.params._id;
+  let myDescription = req.body.description;
+  let myDuration = parseInt(req.body.duration);
+  let myDate = req.body.date;
 
-  if (!req.body.date) {
-    thisDate = (new Date()).toDateString();
-  } else if (new Date(req.body.date) == "Invalid Date") {
-    return res.json({error: "invalid date"})
+  if (new Date(myDate) == "Invalid Date") {
+    return res.json ({error: "Date is Invalid"});
+  } else if (myDate == "") {
+    myDate = (new Date()).toDateString();
   } else {
-    thisDate = (new Date(req.body.date)).toDateString();
+    myDate = (new Date(myDate)).toDateString();
+  }
+  
+  if (!myId) {
+    return res.json({error: "No id provided"});
   }
 
-  User.findById(thisId, (err, user) => {
-    if (err) return console.error(err);
-    if (user !== null) {
-      let newExercise = new Exercise({
-        userId: thisId,
-        description: thisDescription,
-        duration: thisDuration,
-        date: thisDate
-      });
-      newExercise.save( (err2, exercise) => {
-        if (err2) return console.error(err2);
-        return res.json({
-          id: user._id,
-          username: user.username,
-          date: exercise.date,
-          duration: exercise.duration,
-          description: exercise.description  
-        });
-      });
-    } else {
-      return res.json({error: "user not found"})
-    }
+  if (!myDescription) {
+    return res.json({error: "No description provided"});
+  }
+
+  if (isNaN(myDuration)) {
+    return res.json ({error: "Invalid duration"})
+  }
+
+  let newExercise = new Exercise({
+    description: myDescription,
+    duration: myDuration,
+    date: myDate
   });
+
+  User.findByIdAndUpdate(
+    myId,
+    {$push: {log: newExercise}},
+    {recent: true},
+    (err, updatedUser) => {
+      if (err) return console.error(err);
+      return res.json({
+        _id: updatedUser._id,
+        username: updatedUser.username,
+        date: newExercise.date,
+        duration: newExercise.duration,
+        description: newExercise.description
+      });
+    }
+  );
 });
 
 
