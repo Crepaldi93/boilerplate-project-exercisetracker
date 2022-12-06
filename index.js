@@ -92,8 +92,6 @@ app.post("/api/users/:_id/exercises", (req, res) => {
     myDate = myDate.replace(/-/g, '\/')
     myDate = new Date(myDate).toDateString();
   }
-  
-  console.log(myDate);
 
   if (!myId) {
     return res.json({error: "No id provided"});
@@ -130,7 +128,20 @@ app.post("/api/users/:_id/exercises", (req, res) => {
   );
 });
 
+// Get full exercise log
+app.get("/api/users/:_id/logs", (req, res) => {
+  let id = req.params._id
 
+  User.findById(id, (err, data) => {
+    if (err) return console.error(err);
+    return res.json({
+      _id: data._id,
+      username: data.username,
+      count: data.log.length,
+      log: data.log
+    });
+  });
+});
 
 // Export mongoose
 exports.UserModel = User
