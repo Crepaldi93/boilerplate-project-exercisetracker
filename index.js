@@ -6,7 +6,7 @@ const mongoose = require('mongoose');
 const { response } = require('express');
 
 // Connect to mongoDB
-mongoose.connect("mongodb+srv://crepaldi93:senha123@exercise-tracker.tvmlgb6.mongodb.net/?retryWrites=true&w=majority", { useNewUrlParser: true, useUnifiedTopology: true });
+mongoose.connect("mongodb+srv://crepaldi93:senha123@exercise-tracker.2manwpr.mongodb.net/?retryWrites=true&w=majority", { useNewUrlParser: true, useUnifiedTopology: true });
 
 // Create exercise schema
 const exerciseSchema = new mongoose.Schema({
