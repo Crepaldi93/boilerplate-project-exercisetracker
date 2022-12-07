@@ -58,6 +58,16 @@ app.post("/api/users", (req, res) => {
   // Get user input from the html page
   let htmlUser = req.body.username;
 
+  // Clear database if username "delete_user_database" is provided
+  /*
+  if (htmlUser === "delete_user_database") {
+    User.deleteMany({}, (err, data) => {
+      if (err) return console.error(err);
+      return res.json(data)
+    });
+  }
+  */
+
   // Insert htmlUser into mongodb
   let newUser = new User({username: htmlUser});
   newUser.save((err, savedUser) => {
@@ -128,20 +138,37 @@ app.post("/api/users/:_id/exercises", (req, res) => {
   );
 });
 
-// Get full exercise log
+// Get exercise log
 app.get("/api/users/:_id/logs", (req, res) => {
   let id = req.params._id
 
   User.findById(id, (err, data) => {
     if (err) return console.error(err);
+
+    let newLog = []
+
+    for (item in data.log) {
+      newLog.push({
+        description: data.log[item].description,
+        duration: data.log[item].duration,
+        date: data.log[item].date
+      });
+    }
+
+    if (req.query.limit) {
+      newLog = newLog.slice(0,req.query.limit);
+    }
+
     return res.json({
       _id: data._id,
       username: data.username,
-      count: data.log.length,
-      log: data.log
-    });
+      count: newLog.length,
+      log: newLog
+    }) 
   });
 });
+
+
 
 // Export mongoose
 exports.UserModel = User
