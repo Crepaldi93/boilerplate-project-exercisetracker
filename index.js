@@ -67,6 +67,7 @@ app.post("/api/users", (req, res) => {
     });
   }
   */
+  
 
   // Insert htmlUser into mongodb
   let newUser = new User({username: htmlUser});
@@ -156,9 +157,37 @@ app.get("/api/users/:_id/logs", (req, res) => {
     }
 
     if (req.query.limit) {
-      newLog = newLog.slice(0,req.query.limit);
+      newLog = newLog.slice(0, req.query.limit);
     }
 
+    // Filter time
+    if (req.query.from || req.query.to) {
+      let firstDate = new Date(0);
+      let lastDate = new Date();
+
+      if (req.query.from) {
+        firstDate = new Date(req.query.from);
+      }
+
+      if (req.query.to) {
+        lastDate = new Date(req.query.to);
+      }
+
+      firstDate = firstDate.getTime();
+      lastDate = lastDate.getTime();
+      
+      newLog = newLog.filter((session) => {
+        let sessionDate = new Date(session.date).getTime();
+        return sessionDate >= firstDate && sessionDate <= lastDate
+      })
+    }
+
+    console.log({
+      _id: data._id,
+      username: data.username,
+      count: newLog.length,
+      log: newLog
+    })
     return res.json({
       _id: data._id,
       username: data.username,
