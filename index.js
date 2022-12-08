@@ -59,24 +59,32 @@ app.post("/api/users", (req, res) => {
   let htmlUser = req.body.username;
 
   // Clear database if username "delete_user_database" is provided
-  /*
   if (htmlUser === "delete_user_database") {
     User.deleteMany({}, (err, data) => {
       if (err) return console.error(err);
       return res.json(data)
     });
   }
-  */
   
-
-  // Insert htmlUser into mongodb
-  let newUser = new User({username: htmlUser});
-  newUser.save((err, savedUser) => {
+  User.findOne({username: htmlUser}, (err, oldUser) => {
     if (err) return console.error(err);
-    let responseObject = {};
-    responseObject["username"] = savedUser.username;
-    responseObject["_id"] = savedUser.id;
-    res.json(responseObject)
+
+    if (!oldUser) {
+      // Insert htmlUser into mongodb
+      let newUser = new User({username: htmlUser});
+      newUser.save((err2, savedUser) => {
+        if (err2) return console.error(err2);
+        return res.json({
+          username: savedUser.username,
+          _id: savedUser.id
+        })
+      });
+    } else {
+      return res.json({
+        username: oldUser.username,
+        _id: oldUser.id
+      });
+    }
   });
 });
 
@@ -84,7 +92,16 @@ app.post("/api/users", (req, res) => {
 app.get("/api/users", (req, res) => {
   User.find({}, (err, usersArray) => {
     if (err) return console.error(err);
-    res.json(usersArray);
+
+    let formattedArray = [];
+
+    for (item in usersArray) {
+      formattedArray.push({
+        _id: usersArray[item]._id,
+        username: usersArray[item].username
+      })
+    }
+    res.json(formattedArray);
   })
 })
 
@@ -96,13 +113,16 @@ app.post("/api/users/:_id/exercises", (req, res) => {
   let myDate = req.body.date;
 
   if (!myDate) {
-    myDate = new Date().toDateString();
-  } else if (new Date(myDate) == 'Invalid Date') {
-    return res.json({error: 'Date is invalid'});
+    myDate = new Date().toISOString();
+  } else if (myDate.match(/^\d{4}-\d{2}-\d{2}/)) {
+    myDate = myDate.replace(/-/g, "/").substring();
+    myDate = new Date(myDate).toISOString();
   } else {
-    myDate = myDate.replace(/-/g, '\/')
-    myDate = new Date(myDate).toDateString();
+    return res.json({error: "Invalid Date Format"})
   }
+
+  myDate = myDate.replace(/-/g, "/");
+  myDate = myDate.substring(0, myDate.indexOf("T"));
 
   if (!myId) {
     return res.json({error: "No id provided"});
@@ -128,10 +148,13 @@ app.post("/api/users/:_id/exercises", (req, res) => {
     {recent: true},
     (err, updatedUser) => {
       if (err) return console.error(err);
+
+      let formattedDate = new Date(newExercise.date).toDateString();
+
       return res.json({
-        _id: updatedUser._id,
+        _id: updatedUser.id,
         username: updatedUser.username,
-        date: newExercise.date,
+        date: formattedDate,
         duration: newExercise.duration,
         description: newExercise.description
       });
@@ -156,10 +179,6 @@ app.get("/api/users/:_id/logs", (req, res) => {
       });
     }
 
-    if (req.query.limit) {
-      newLog = newLog.slice(0, req.query.limit);
-    }
-
     // Filter time
     if (req.query.from || req.query.to) {
       let firstDate = new Date(0);
@@ -182,14 +201,16 @@ app.get("/api/users/:_id/logs", (req, res) => {
       })
     }
 
-    console.log({
-      _id: data._id,
-      username: data.username,
-      count: newLog.length,
-      log: newLog
-    })
+    for (item in newLog) {
+      newLog[item].date = new Date(newLog[item].date).toDateString();
+    }
+    
+    if (req.query.limit) {
+      newLog = newLog.slice(0, req.query.limit);
+    }
+    
     return res.json({
-      _id: data._id,
+      _id: data.id,
       username: data.username,
       count: newLog.length,
       log: newLog
